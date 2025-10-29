@@ -1084,7 +1084,8 @@ def vis_blender(
                     cmd += " --inplace"
             cmd += " > /dev/null 2>&1"
             # print(cmd)
-            os.system(cmd)
+            ret = os.system(cmd)
+            assert ret >> 8 == 0
 
     print(f"Output animatable model: '{db.anim_path}'")
 
@@ -1095,7 +1096,8 @@ def vis_blender(
             assert os.path.isfile(fbx2glb_path), f"'{fbx2glb_path}' not found"
             fbx2glb_cmd = f"{fbx2glb_path} --binary --keep-attribute auto --fbx-temp-dir '{tmpdir}' --input '{os.path.abspath(db.anim_path)}' --output '{os.path.abspath(db.anim_vis_path)}'"
             fbx2glb_cmd += " > /dev/null 2>&1"
-            os.system(fbx2glb_cmd)
+            ret = os.system(fbx2glb_cmd)
+            assert ret >> 8 == 0
             print(f"Output visualization: '{db.anim_vis_path}'")
     else:
         db.rest_vis_path = None
