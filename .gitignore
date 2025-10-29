@@ -172,3 +172,6 @@ output
 *.ply
 *.blend
 util/FBX2glTF
+
+# vim
+*.swp
