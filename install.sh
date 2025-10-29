@@ -27,7 +27,7 @@ if [ ! -e output/best ]; then
   git -C /tmp/hf-data lfs pull -I output/best/new
   mkdir -p output/best
   cp -r /tmp/hf-data/output/best/new output/best/
-  cp /tmp/hf-data/data/* data/
+  cp -r /tmp/hf-data/data/* data/
 fi
 
 if [ ! -e util/FBX2glTF ]; then
