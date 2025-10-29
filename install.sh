@@ -20,7 +20,9 @@ if [ ! -e output/best ]; then
   rm -fR /tmp/hf-data
   GIT_LFS_SKIP_SMUDGE=1 git clone https://huggingface.co/jasongzy/Make-It-Animatable /tmp/hf-data
   git -C /tmp/hf-data lfs pull -I output/best/new
-  mkdir -p output/best && cp -r /tmp/hf-data/output/best/new output/best/
+  mkdir -p output/best
+  cp -r /tmp/hf-data/output/best/new output/best/
+  cp /tmp/hf-data/data/* data/
 fi
 
 if [ ! -e util/FBX2glTF ]; then
