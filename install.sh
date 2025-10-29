@@ -27,6 +27,7 @@ fi
 
 if [ ! -e util/FBX2glTF ]; then
   wget https://github.com/facebookincubator/FBX2glTF/releases/download/v0.9.7/FBX2glTF-linux-x64 -O util/FBX2glTF
+  chmod 755 util/FBX2glTF
 fi
 
 # source .venv/bin/activate
