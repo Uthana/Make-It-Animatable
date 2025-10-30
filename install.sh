@@ -35,5 +35,10 @@ if [ ! -e util/FBX2glTF ]; then
   chmod 755 util/FBX2glTF
 fi
 
+if [ ! -e blender-4.2.15-linux-x64 ]; then
+  wget https://mirrors.iu13.net/blender/release/Blender4.2/blender-4.2.15-linux-x64.tar.xz
+  tar xJf blender-4.2.15-linux-x64.tar.xz
+fi
+
 # source .venv/bin/activate
 # python3 app.py

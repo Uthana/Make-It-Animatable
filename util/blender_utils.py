@@ -3,6 +3,7 @@
 import math
 import os
 import os.path
+import shutil
 
 import bpy
 import numpy as np
@@ -14,7 +15,7 @@ import mathutils
 
 USE_WORLD_COORDINATES = False
 
-bpy.app.binary_path = "/opt/uve/opt/blender-4.2/blender"
+bpy.app.binary_path = shutil.which("blender")
 assert os.path.isfile(bpy.app.binary_path)
 
 class Mode:
