@@ -2,6 +2,7 @@
 
 import math
 import os
+import os.path
 
 import bpy
 import numpy as np
@@ -13,6 +14,8 @@ import mathutils
 
 USE_WORLD_COORDINATES = False
 
+bpy.app.binary_path = "/opt/uve/opt/blender-4.2/blender"
+assert os.path.isfile(bpy.app.binary_path)
 
 class Mode:
     def __init__(self, mode_name="EDIT", active_obj: Object = None):
