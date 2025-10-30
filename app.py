@@ -1024,13 +1024,57 @@ def vis_blender(
             db.gs_rest = db.gs_rest.numpy()
     template_path = TEMPLATE_PATH_ADD if joints_additional else TEMPLATE_PATH
 
+    print(f"Vertices: {len(db.mesh.vertices)}, Faces: {len(db.mesh.faces)}")
+
+    mesh_rescaled = db.mesh
+    joints_rescaled = db.joints
+    joints_tail_rescaled = db.joints_tail
+    gs_rescaled = db.gs
+    gs_rest_rescaled = db.gs_rest
+    pose_rescaled = db.pose
+    # Scale to match original mesh size
+    if db.global_transform is not None:
+        # global transform matrix
+        matrix =db.global_transform.get_matrix()  # 4x4 matrix 
+        rotation_matrix = matrix[0, :3, :3]
+
+        print(f"matrix: {matrix}")
+        print(f"rotation_matrix: {rotation_matrix}")
+
+        # magnitude of each column == scale of axis
+        scale_x = torch.norm(rotation_matrix[:, 0])
+        scale_y = torch.norm(rotation_matrix[:, 1])
+        scale_z = torch.norm(rotation_matrix[:, 2])
+
+        print(f"scale_x: {scale_x}, scale_y: {scale_y}, scale_z: {scale_z}")
+
+        # uniform scale across x, y, z axes
+        scale_factor = (scale_x + scale_y + scale_z) / 3.0
+        print(f"avg scale_factor: {scale_factor}")
+        inverse_scale = (1.0 / scale_factor).item()
+        print(f"inverse_scale: {inverse_scale}")
+
+        # scale mesh
+        mesh_rescaled = db.mesh.copy()
+        mesh_rescaled.vertices = mesh_rescaled.vertices * inverse_scale
+
+        # scale joints
+        joints_rescaled = db.joints * inverse_scale
+        joints_tail_rescaled = db.joints_tail * inverse_scale
+
+        if db.pose is not None:
+            pose_rescaled = db.pose.copy() if isinstance(db.pose, np.ndarray) else db.pose.clone()
+            # scale translation
+            pose_rescaled[:, :3, 3] *= inverse_scale
+
+    print(f"AFTER SCALING: Vertices: {len(mesh_rescaled.vertices)}, Faces: {len(mesh_rescaled.faces)}")
     data = dict(
-        mesh=db.mesh,
-        gs=db.gs_rest if reset_to_rest else db.gs,
-        joints=db.joints,
-        joints_tail=db.joints_tail,
+        mesh=mesh_rescaled,
+        gs=gs_rest_rescaled if reset_to_rest else gs_rescaled,
+        joints=joints_rescaled,
+        joints_tail=joints_tail_rescaled,
         bw=db.bw,
-        pose=db.pose,
+        pose=pose_rescaled,
         bones_idx_dict=dict(bones_idx_dict_joints),
         pose_ignore_list=get_pose_ignore_list(rest_pose_type, ignore_pose_parts),
     )
