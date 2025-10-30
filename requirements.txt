@@ -11,7 +11,7 @@ timm
 torch-cluster
 PyMCubes
 
-bpy==4.3.0
+bpy==4.2.15
 fake-bpy-module
 gradio>=5.25.0
 ipykernel
