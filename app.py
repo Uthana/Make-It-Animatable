@@ -1066,7 +1066,7 @@ def vis_blender(
         # Directly call bpy here causes crash, because Blender does not support modifying data in child threads
         with tempfile.NamedTemporaryFile(suffix=".npz") as f:
             np.savez(f.name, **data)
-            cmd = f"python app_blender.py --input_path '{f.name}' --output_path '{os.path.abspath(db.anim_path)}'"
+            cmd = f"{sys.executable} app_blender.py --input_path '{f.name}' --output_path '{os.path.abspath(db.anim_path)}'"
             cmd += f" --template_path '{os.path.abspath(template_path)}'"
             if db.is_mesh:
                 cmd += f" --rest_path '{os.path.abspath(db.rest_vis_path)}'"
