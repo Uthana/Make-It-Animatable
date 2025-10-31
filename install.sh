@@ -10,7 +10,7 @@ set -eo pipefail
 
 if [ ! -e .venv ]; then
   /opt/uve/bin/python3 -m venv .venv
-  .venv/bin/pip install -r requirements.txt
+  .venv/bin/pip install -r requirements-frozen.txt
 fi
 
 if [ ! -e data/Mixamo ]; then
