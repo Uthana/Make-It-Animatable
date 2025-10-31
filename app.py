@@ -1024,57 +1024,42 @@ def vis_blender(
             db.gs_rest = db.gs_rest.numpy()
     template_path = TEMPLATE_PATH_ADD if joints_additional else TEMPLATE_PATH
 
-    print(f"Vertices: {len(db.mesh.vertices)}, Faces: {len(db.mesh.faces)}")
-
-    mesh_rescaled = db.mesh
-    joints_rescaled = db.joints
-    joints_tail_rescaled = db.joints_tail
-    gs_rescaled = db.gs
-    gs_rest_rescaled = db.gs_rest
-    pose_rescaled = db.pose
-    # Scale to match original mesh size
+    mesh = db.mesh
+    joints = db.joints
+    joints_tail = db.joints_tail
+    pose = db.pose
+    
+    # undo global transform
     if db.global_transform is not None:
-        # global transform matrix
-        matrix =db.global_transform.get_matrix()  # 4x4 matrix 
-        rotation_matrix = matrix[0, :3, :3]
+        # get inverse of global transform matrix
+        transform_inv = db.global_transform.inverse()
+        # inverse transform of mesh vertices 
+        mesh_copy = mesh.copy()
+        mesh_tensor = torch.from_numpy(mesh_copy.vertices).float().unsqueeze(0)
+        verts_original = transform_inv.transform_points(mesh_tensor).squeeze(0).cpu().numpy()
+        mesh.vertices = verts_original
+        # inverse transform of joints
+        joints_copy = joints.copy()
+        joints_tensor = torch.from_numpy(joints_copy).float().unsqueeze(0)
+        joints = transform_inv.transform_points(joints_tensor).squeeze(0).cpu().numpy()
+        # inverse transform of joints tail
+        joints_tail_copy = joints_tail.copy()
+        joints_tail_tensor = torch.from_numpy(joints_tail_copy).float().unsqueeze(0)
+        joints_tail = transform_inv.transform_points(joints_tail_tensor).squeeze(0).cpu().numpy()
+        # inverse transform of pose translations
+        if pose is not None:
+            pose_copy = pose.copy()
+            pose_trans_tensor = torch.from_numpy(pose_copy[:, :3, 3]).float().unsqueeze(0)
+            pose_trans_original = transform_inv.transform_points(pose_trans_tensor).squeeze(0).cpu().numpy()
+            pose[:, :3, 3] = pose_trans_original
 
-        print(f"matrix: {matrix}")
-        print(f"rotation_matrix: {rotation_matrix}")
-
-        # magnitude of each column == scale of axis
-        scale_x = torch.norm(rotation_matrix[:, 0])
-        scale_y = torch.norm(rotation_matrix[:, 1])
-        scale_z = torch.norm(rotation_matrix[:, 2])
-
-        print(f"scale_x: {scale_x}, scale_y: {scale_y}, scale_z: {scale_z}")
-
-        # uniform scale across x, y, z axes
-        scale_factor = (scale_x + scale_y + scale_z) / 3.0
-        print(f"avg scale_factor: {scale_factor}")
-        inverse_scale = (1.0 / scale_factor).item()
-        print(f"inverse_scale: {inverse_scale}")
-
-        # scale mesh
-        mesh_rescaled = db.mesh.copy()
-        mesh_rescaled.vertices = mesh_rescaled.vertices * inverse_scale
-
-        # scale joints
-        joints_rescaled = db.joints * inverse_scale
-        joints_tail_rescaled = db.joints_tail * inverse_scale
-
-        if db.pose is not None:
-            pose_rescaled = db.pose.copy() if isinstance(db.pose, np.ndarray) else db.pose.clone()
-            # scale translation
-            pose_rescaled[:, :3, 3] *= inverse_scale
-
-    print(f"AFTER SCALING: Vertices: {len(mesh_rescaled.vertices)}, Faces: {len(mesh_rescaled.faces)}")
     data = dict(
-        mesh=mesh_rescaled,
-        gs=gs_rest_rescaled if reset_to_rest else gs_rescaled,
-        joints=joints_rescaled,
-        joints_tail=joints_tail_rescaled,
+        mesh=mesh,
+        gs=db.gs_rest if reset_to_rest else db.gs,  # these values are always None
+        joints=joints,
+        joints_tail=joints_tail,
         bw=db.bw,
-        pose=pose_rescaled,
+        pose=pose,
         bones_idx_dict=dict(bones_idx_dict_joints),
         pose_ignore_list=get_pose_ignore_list(rest_pose_type, ignore_pose_parts),
     )
