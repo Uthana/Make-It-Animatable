@@ -118,7 +118,7 @@ class DB:
     pts: torch.Tensor = None
     pts_normal: torch.Tensor = None
     global_transform: Transform3d = None
-
+    norm_transform: Transform3d = None  # Track only scaling/translation (no rotation)
     output_dir: str = None
     joints_coarse_path: str = None
     normed_path: str = None
@@ -712,6 +712,7 @@ def preprocess(db: DB):
     db.pts = pts
     db.pts_normal = pts_normal
     db.global_transform = global_transform
+    db.norm_transform = norm
 
     return {
         output_joints_coarse: change_Model3D(db.joints_coarse_path, display_mode="wireframe", is_pc=not db.is_mesh),
@@ -809,6 +810,7 @@ def infer(input_normal: bool, db: DB):
     db.joints = joints
     db.pose = pose
     db.global_transform = db.global_transform.compose(norm)
+    db.norm_transform = db.norm_transform.compose(norm)
     return {state: db}
 
 
@@ -1048,6 +1050,7 @@ def vis_blender(
         joints_tail = transform_inv.transform_points(joints_tail_tensor).squeeze(0).cpu().numpy()
         # inverse transform of pose translations
         if pose is not None:
+            # can't just apply inverse transform to pose matrices; rotation is around the joint position
             pose_copy = pose.copy()
             pose_trans_tensor = torch.from_numpy(pose_copy[:, :3, 3]).float().unsqueeze(0)
             pose_trans_original = transform_inv.transform_points(pose_trans_tensor).squeeze(0).cpu().numpy()
