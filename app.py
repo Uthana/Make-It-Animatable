@@ -118,7 +118,6 @@ class DB:
     pts: torch.Tensor = None
     pts_normal: torch.Tensor = None
     global_transform: Transform3d = None
-    norm_transform: Transform3d = None  # Track only scaling/translation (no rotation)
     output_dir: str = None
     joints_coarse_path: str = None
     normed_path: str = None
@@ -712,7 +711,6 @@ def preprocess(db: DB):
     db.pts = pts
     db.pts_normal = pts_normal
     db.global_transform = global_transform
-    db.norm_transform = norm
 
     return {
         output_joints_coarse: change_Model3D(db.joints_coarse_path, display_mode="wireframe", is_pc=not db.is_mesh),
@@ -810,7 +808,6 @@ def infer(input_normal: bool, db: DB):
     db.joints = joints
     db.pose = pose
     db.global_transform = db.global_transform.compose(norm)
-    db.norm_transform = db.norm_transform.compose(norm)
     return {state: db}
 
 
