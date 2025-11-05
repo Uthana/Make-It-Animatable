@@ -11,6 +11,6 @@ fi
 ./install.sh
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2> /dev/null)"
-rsync -av ../Make-It-Animatable/ netops.uthana.dev:autorig/$BRANCH/Make-It-Animatable
+rsync -av --mkpath ../Make-It-Animatable/ netops.uthana.dev:autorig/$BRANCH/Make-It-Animatable
 
 echo 'Success!'
