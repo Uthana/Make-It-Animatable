@@ -118,7 +118,6 @@ class DB:
     pts: torch.Tensor = None
     pts_normal: torch.Tensor = None
     global_transform: Transform3d = None
-
     output_dir: str = None
     joints_coarse_path: str = None
     normed_path: str = None
@@ -1024,13 +1023,43 @@ def vis_blender(
             db.gs_rest = db.gs_rest.numpy()
     template_path = TEMPLATE_PATH_ADD if joints_additional else TEMPLATE_PATH
 
+    mesh = db.mesh
+    joints = db.joints
+    joints_tail = db.joints_tail
+    pose = db.pose
+    
+    # undo global transform
+    if db.global_transform is not None:
+        # get inverse of global transform matrix
+        transform_inv = db.global_transform.inverse()
+        # inverse transform of mesh vertices 
+        mesh_copy = mesh.copy()
+        mesh_tensor = torch.from_numpy(mesh_copy.vertices).float().unsqueeze(0)
+        verts_original = transform_inv.transform_points(mesh_tensor).squeeze(0).cpu().numpy()
+        mesh.vertices = verts_original
+        # inverse transform of joints
+        joints_copy = joints.copy()
+        joints_tensor = torch.from_numpy(joints_copy).float().unsqueeze(0)
+        joints = transform_inv.transform_points(joints_tensor).squeeze(0).cpu().numpy()
+        # inverse transform of joints tail
+        joints_tail_copy = joints_tail.copy()
+        joints_tail_tensor = torch.from_numpy(joints_tail_copy).float().unsqueeze(0)
+        joints_tail = transform_inv.transform_points(joints_tail_tensor).squeeze(0).cpu().numpy()
+        # inverse transform of pose translations
+        if pose is not None:
+            # can't just apply inverse transform to pose matrices; rotation is around the joint position
+            pose_copy = pose.copy()
+            pose_trans_tensor = torch.from_numpy(pose_copy[:, :3, 3]).float().unsqueeze(0)
+            pose_trans_original = transform_inv.transform_points(pose_trans_tensor).squeeze(0).cpu().numpy()
+            pose[:, :3, 3] = pose_trans_original
+
     data = dict(
-        mesh=db.mesh,
-        gs=db.gs_rest if reset_to_rest else db.gs,
-        joints=db.joints,
-        joints_tail=db.joints_tail,
+        mesh=mesh,
+        gs=db.gs_rest if reset_to_rest else db.gs,  # these values are always None
+        joints=joints,
+        joints_tail=joints_tail,
         bw=db.bw,
-        pose=db.pose,
+        pose=pose,
         bones_idx_dict=dict(bones_idx_dict_joints),
         pose_ignore_list=get_pose_ignore_list(rest_pose_type, ignore_pose_parts),
     )
