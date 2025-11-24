@@ -1183,9 +1183,9 @@ def _pipeline(
     animation_file: str = None,
     retarget=True,
     inplace=True,
+    front_facing=True,
     db: DB = None,
     export_temp=False,
-    front_facing=True,
 ):
     if db is None:
         db = DB()
