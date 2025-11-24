@@ -1448,6 +1448,12 @@ def init_blocks():
                                     value=True,
                                     interactive=input_retarget.interactive,
                                 )
+                                input_front_facing = gr.Checkbox(
+                                    label="Front Facing",
+                                    info="Orient the character to face forward.",
+                                    value=True,
+                                    interactive=True,
+                                )
 
                 with gr.Row():
                     submit_btn = gr.Button("Run", variant="primary")
@@ -1482,6 +1488,7 @@ def init_blocks():
                 input_animation_file,
                 input_retarget,
                 input_inplace,
+                input_front_facing,
             )
 
             # Outputs
@@ -1608,6 +1615,7 @@ def init_blocks():
                         animation_file=inputs[input_animation_file],
                         retarget=inputs[input_retarget],
                         inplace=inputs[input_inplace],
+                        front_facing=inputs[input_front_facing],
                         db=inputs[state],
                         # export_temp=True,
                     )
@@ -1634,6 +1642,7 @@ def init_blocks():
                     input_retarget,
                     input_inplace,
                     state,
+                    input_front_facing,
                 ],
                 outputs={output_rest_vis, output_anim, output_anim_vis, state},
             )
@@ -1703,6 +1712,7 @@ if __name__ == "__main__":
     #         animation_file="./data/Standard Run.fbx",
     #         retarget=True,
     #         inplace=True,
+    #         front_facing=True,
     #     ):
     #         pass
 
