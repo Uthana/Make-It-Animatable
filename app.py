@@ -1010,8 +1010,8 @@ def vis_blender(
     animation_file: str,
     retarget: bool,
     inplace: bool,
-    db: DB,
     front_facing: bool,
+    db: DB,
 ):
     if any(x is None for x in (db.mesh, db.joints, db.joints_tail, db.bw)):
         raise gr.Error("Run the inference first")
@@ -1203,7 +1203,7 @@ def _pipeline(
     yield vis(bw_fix, bw_vis_bone, no_fingers, db)
     time.sleep(0.1)
     yield vis_blender(
-        reset_to_rest, no_fingers, rest_pose_type, ignore_pose_parts, animation_file, retarget, inplace, db, front_facing
+        reset_to_rest, no_fingers, rest_pose_type, ignore_pose_parts, animation_file, retarget, inplace, front_facing, db
     )
     time.sleep(0.1)
     yield finish(db=None)  # keep the outputs for possible re-animation later
@@ -1641,8 +1641,8 @@ def init_blocks():
                     input_animation_file,
                     input_retarget,
                     input_inplace,
-                    state,
                     input_front_facing,
+                    state,
                 ],
                 outputs={output_rest_vis, output_anim, output_anim_vis, state},
             )
