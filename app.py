@@ -16,7 +16,7 @@ import torch
 import torch.nn.functional as F
 import trimesh
 from pytorch3d.transforms import Transform3d
-
+from util.utils import decompose_transform
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from model import PCAE
@@ -1011,6 +1011,7 @@ def vis_blender(
     retarget: bool,
     inplace: bool,
     db: DB,
+    front_facing: bool,
 ):
     if any(x is None for x in (db.mesh, db.joints, db.joints_tail, db.bw)):
         raise gr.Error("Run the inference first")
@@ -1031,7 +1032,17 @@ def vis_blender(
     # undo global transform
     if db.global_transform is not None:
         # get inverse of global transform matrix
-        transform_inv = db.global_transform.inverse()
+        if front_facing:
+            # only undo scale and translation from global_transform
+            inv_transform = db.global_transform.inverse().get_matrix().transpose(-1, -2)
+            t, R, s = decompose_transform(inv_transform, return_quat=False, return_concat=False)
+
+            M = torch.eye(4, device=t.device).repeat(t.shape[0], 1, 1)
+            M[:, :3, :3] = torch.diag_embed(s)  # set the scale
+            M[:, 3, :3] = t  # set the translation
+            transform_inv = Transform3d(matrix=M, device=t.device)
+        else:
+            transform_inv = db.global_transform.inverse()
         # inverse transform of mesh vertices 
         mesh_copy = mesh.copy()
         mesh_tensor = torch.from_numpy(mesh_copy.vertices).float().unsqueeze(0)
@@ -1174,6 +1185,7 @@ def _pipeline(
     inplace=True,
     db: DB = None,
     export_temp=False,
+    front_facing=True,
 ):
     if db is None:
         db = DB()
@@ -1191,7 +1203,7 @@ def _pipeline(
     yield vis(bw_fix, bw_vis_bone, no_fingers, db)
     time.sleep(0.1)
     yield vis_blender(
-        reset_to_rest, no_fingers, rest_pose_type, ignore_pose_parts, animation_file, retarget, inplace, db
+        reset_to_rest, no_fingers, rest_pose_type, ignore_pose_parts, animation_file, retarget, inplace, db, front_facing
     )
     time.sleep(0.1)
     yield finish(db=None)  # keep the outputs for possible re-animation later
@@ -1436,6 +1448,12 @@ def init_blocks():
                                     value=True,
                                     interactive=input_retarget.interactive,
                                 )
+                                input_front_facing = gr.Checkbox(
+                                    label="Front Facing",
+                                    info="Orient the character to face forward.",
+                                    value=True,
+                                    interactive=True,
+                                )
 
                 with gr.Row():
                     submit_btn = gr.Button("Run", variant="primary")
@@ -1470,6 +1488,7 @@ def init_blocks():
                 input_animation_file,
                 input_retarget,
                 input_inplace,
+                input_front_facing,
             )
 
             # Outputs
@@ -1596,6 +1615,7 @@ def init_blocks():
                         animation_file=inputs[input_animation_file],
                         retarget=inputs[input_retarget],
                         inplace=inputs[input_inplace],
+                        front_facing=inputs[input_front_facing],
                         db=inputs[state],
                         # export_temp=True,
                     )
@@ -1622,6 +1642,7 @@ def init_blocks():
                     input_retarget,
                     input_inplace,
                     state,
+                    input_front_facing,
                 ],
                 outputs={output_rest_vis, output_anim, output_anim_vis, state},
             )
@@ -1691,6 +1712,7 @@ if __name__ == "__main__":
     #         animation_file="./data/Standard Run.fbx",
     #         retarget=True,
     #         inplace=True,
+    #         front_facing=True,
     #     ):
     #         pass
 
