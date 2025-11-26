@@ -1032,37 +1032,54 @@ def vis_blender(
     # undo global transform
     if db.global_transform is not None:
         # get inverse of global transform matrix
+        inv_transform = db.global_transform.inverse().get_matrix().transpose(-1, -2)
+        t, R, s = decompose_transform(inv_transform, return_quat=False, return_concat=False)
         if front_facing:
             # only undo scale and translation from global_transform
-            inv_transform = db.global_transform.inverse().get_matrix().transpose(-1, -2)
-            t, R, s = decompose_transform(inv_transform, return_quat=False, return_concat=False)
-
             M = torch.eye(4, device=t.device).repeat(t.shape[0], 1, 1)
             M[:, :3, :3] = torch.diag_embed(s)  # set the scale
-            M[:, 3, :3] = t  # set the translation
+            M[:, 3, :3] = t  # set the translation (last row)
             transform_inv = Transform3d(matrix=M, device=t.device)
         else:
             transform_inv = db.global_transform.inverse()
+
         # inverse transform of mesh vertices 
         mesh_copy = mesh.copy()
         mesh_tensor = torch.from_numpy(mesh_copy.vertices).float().unsqueeze(0)
         verts_original = transform_inv.transform_points(mesh_tensor).squeeze(0).cpu().numpy()
         mesh.vertices = verts_original
+
         # inverse transform of joints
         joints_copy = joints.copy()
         joints_tensor = torch.from_numpy(joints_copy).float().unsqueeze(0)
         joints = transform_inv.transform_points(joints_tensor).squeeze(0).cpu().numpy()
+
         # inverse transform of joints tail
         joints_tail_copy = joints_tail.copy()
         joints_tail_tensor = torch.from_numpy(joints_tail_copy).float().unsqueeze(0)
         joints_tail = transform_inv.transform_points(joints_tail_tensor).squeeze(0).cpu().numpy()
-        # inverse transform of pose translations
+
+        # inverse transform of pose
         if pose is not None:
-            # can't just apply inverse transform to pose matrices; rotation is around the joint position
             pose_copy = pose.copy()
-            pose_trans_tensor = torch.from_numpy(pose_copy[:, :3, 3]).float().unsqueeze(0)
-            pose_trans_original = transform_inv.transform_points(pose_trans_tensor).squeeze(0).cpu().numpy()
-            pose[:, :3, 3] = pose_trans_original
+            pose_tensor = torch.from_numpy(pose_copy).float()
+
+            # extract rotation matrix from inverse transform
+            transform_inv_matrix = transform_inv.get_matrix().transpose(-1, -2)
+            _, R_inv, _ = decompose_transform(transform_inv_matrix, return_quat=False, return_concat=False)
+
+            # handle batch dimension if neede (usually B=1)
+            if R_inv.shape[0] == 1:
+                R_inv = R_inv.squeeze(0)
+
+            # apply inverse transform to bone translations/rotations
+            new_translation = transform_inv.transform_points(pose_tensor[:, :3, 3].unsqueeze(0)).squeeze(0)
+            pose_rotations = pose_tensor[:, :3, :3]
+            new_rotation = torch.matmul(pose_rotations, R_inv.t())
+            
+            pose_tensor[:, :3, :3] = new_rotation  # set the rotation
+            pose_tensor[:, :3, 3] = new_translation  # set the translation (last column)
+            pose = pose_tensor.cpu().numpy()
 
     data = dict(
         mesh=mesh,
